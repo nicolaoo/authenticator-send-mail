@@ -26,5 +26,4 @@ def login():
             return render_template('index.html', email=email, password=password )
         else:
             flash('Errore nella compilazione del form. Controlla i campi evidenziati.', 'danger')
-
     return render_template('login.html', form=form)
