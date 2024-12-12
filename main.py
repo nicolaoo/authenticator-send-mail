@@ -5,10 +5,6 @@ from flask_login import LoginManager, UserMixin, login_user, logout_user, login_
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
 
-class RegistrationForm(Form):
-    email = StringField('Email', [validators.Length(min=6, max=40), validators.Email(), validators.DataRequired()])
-    password = PasswordField('Password', [validators.DataRequired(), validators.Length(min=6)])
-
 # Configurazione di Flask-Login
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -34,6 +30,7 @@ def load_user(user_id):
 
 # Form per la registrazione
 class RegistrationForm(Form):
+    name = StringField('Name', [validators.DataRequired(), validators.Length(min=6, max=30)])
     email = StringField('Email', [validators.Length(min=6, max=40), validators.Email(), validators.DataRequired()])
     password = PasswordField('Password', [validators.DataRequired(), validators.Length(min=6)])
 
@@ -43,42 +40,67 @@ class LoginForm(Form):
     password = PasswordField('Password', [validators.DataRequired()])
 
 @app.route("/")
-@app.route("/<name>")
-def index(name=None):
+def index():
     if current_user.is_authenticated:
+        name = users.get(current_user.id, {}).get('name', 'utente')
         return render_template('index.html', name=name, email=current_user.id )
     else:
-        return render_template('index.html', name=name, email=None )
+        return render_template('index.html', name=None, email=None )
         
+@app.route("/register", methods=['GET', 'POST'])
+def register():
+    form = RegistrationForm(request.form)
+
+    if request.method == 'POST' and form.validate():
+        name = form.name.data
+        email = form.email.data
+        password = form.password.data
+
+        if email in users:
+            # Passa url_for('login') al template per il link
+            flash(f"L'email è già registrata. Prova a fare il <a class='text-white font-bold text-sm' href='{url_for('login')}'>login</a>.", 'danger')
+        else:
+            users[email] = {"password": password, "name": name}
+            flash(f"Registrazione avvenuta con successo! Benvenuto, "+name+".", 'success')
+
+            user = User(email)
+            login_user(user)
+  
+            return redirect(url_for('dashboard'))
+
+    return render_template('register.html', form=form)
+
+
 @app.route("/login", methods=['GET', 'POST'])
 def login():
     form = LoginForm(request.form)
 
     if request.method == 'POST' and form.validate():
-            email = form.email.data
-            password = form.password.data
+        email = form.email.data
+        password = form.password.data
 
-            if email in users and users[email]['password'] == password:
-                user = User(email)
-                login_user(user)  # Login dell'utente
-                flash('Login effettuato con successo!', 'success')
-                return redirect(url_for('dashboard'))
-            else:
-                flash('Email o password errati. Riprova.', 'danger')
+        if email in users and users[email]['password'] == password:
+            user = User(email)
+            login_user(user)  # Login dell'utente
+            flash('Login effettuato con successo!', 'success')
+            return redirect(url_for('dashboard'))
+        else:
+            flash('Email o password errati. Riprova.', 'danger')
 
     return render_template('login.html', form=form)
 
 @app.route("/dashboard")
 @login_required
 def dashboard():
-    return render_template('dashboard.html', email=current_user.id)
+    name = users.get(current_user.id, {}).get('name', 'utente')
+    return render_template('dashboard.html', name=name, email=current_user.id)
 
 @app.route("/logout")
 @login_required
 def logout():
     logout_user()
     flash('Logout effettuato con successo!', 'success')
-    return redirect(url_for('login'))
+    return redirect(url_for('index'))
 
 if __name__ == "__main__":
     app.run(debug=True)
