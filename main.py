@@ -1,9 +1,11 @@
 from flask import Flask, render_template, request, flash, redirect,url_for
 from wtforms import Form, StringField,PasswordField, validators
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
+from flask_mail import Mail
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
+mail = Mail(app)
 
 # Configurazione di Flask-Login
 login_manager = LoginManager()
@@ -88,6 +90,24 @@ def login():
             flash('Email o password errati. Riprova.', 'danger')
 
     return render_template('login.html', form=form)
+
+@app.route("/send-email", methods=['GET','POST'])
+def sender():
+    emails = ['nicolajobs00@gmail.com', 'developer@webculture.it']  # Dati dinamici
+    form=LoginForm(request.form)
+
+    if request.method == 'POST' and form.validate():
+        email = form.email.data
+        password = form.password.data
+
+        if email in users and users[email]['password'] == password:
+            user = User(email)
+            login_user(user)  # Login dell'utente
+            flash('Login effettuato con successo!', 'success')
+            return redirect(url_for('sender'))
+        else:
+            flash('Email o password errati. Riprova.', 'danger')
+    return render_template('send-email.html', form=form, emails=emails)
 
 @app.route("/dashboard")
 @login_required
