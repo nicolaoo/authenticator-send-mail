@@ -1,4 +1,4 @@
-#!/Users/monica/Desktop/authenticator-send-mail/.venv/bin/python3.12
+#!/Users/nicol/Desktop/authenticator-send-mail/.venv/bin/python3.13
 # -*- coding: utf-8 -*-
 import re
 import sys
